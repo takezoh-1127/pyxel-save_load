@@ -3,6 +3,8 @@
 
 # Pyxel を使ったセーブ・ロードのサンプルコード.
 # pickle、jsonなどを使ってセーブ・ロードするサンプル.
+# jsonはとりあえず確認できように難読化などは行なっていない.
+# 実際にjsonでセーブする場合は、難読化や暗号化などが必要になる場合がある.
 
 
 import pyxel
@@ -11,8 +13,8 @@ import os
 
 import pickle
 
-# `js` モジュールは Pyodide（ブラウザ）環境で提供されます。
-# ローカル実行（pyxel 実行環境）では存在しないため安全にフォールバックします。
+# `js` モジュールは Pyodide（ブラウザ）環境で提供される.
+# ローカル実行（pyxel 実行環境）では存在しないため安全にフォールバックする.
 try:
 	from js import window
 except Exception:
@@ -21,6 +23,8 @@ except Exception:
 from enum import Enum, auto
 
 #print(pyxel.__file__)
+
+# それっぽいデータ構造を定義してみる.
 
 # 言語.
 class Language(Enum):
@@ -55,6 +59,7 @@ class CharacterID(Enum):
 	ENEMY_BEGIN = ENEMY_001
 	ENEMY_END = BOSS_001
 
+# キャラクターデータ.
 class CharacterData:
 	def __init__(self):
 		self._name = ""
