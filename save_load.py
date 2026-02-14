@@ -13,6 +13,7 @@ import os
 
 import pickle
 
+
 # `js` モジュールは Pyodide（ブラウザ）環境で提供される.
 # ローカル実行（pyxel 実行環境）では存在しないため安全にフォールバックする.
 try:
@@ -61,7 +62,8 @@ class CharacterID(Enum):
 
 # キャラクターデータ.
 class CharacterData:
-	def __init__(self):
+	def __init__(self, chara_id = CharacterID.NONE):
+		self._chara_id = chara_id			# キャラクタID.
 		self._name = ""
 		self._level = 1
 		self._exp= 0
@@ -69,6 +71,15 @@ class CharacterData:
 		self._mp = 0
 		pass
 	pass
+
+	@property
+	def chara_id(self):
+		return self._chara_id
+	
+	@chara_id.setter
+	def chara_id(self, value):
+		self._chara_id = value
+		pass
 
 	@property
 	def name(self):
@@ -107,10 +118,11 @@ class CharacterData:
 		pass
 
 	def __repr__(self):
-		return f"CharacterData(name={self._name}, level={self._level}, exp={self._exp}, hp={self._hp}, mp={self._mp})"
+		return f"CharacterData(chara_id={self._chara_id}, name={self._name}, level={self._level}, exp={self._exp}, hp={self._hp}, mp={self._mp})"
 
 	def to_dict(self):
 		return {
+			"chara_id": self._chara_id.name,
 			"name": self._name,
 			"level": self._level,
 			"exp": self._exp,
@@ -121,6 +133,7 @@ class CharacterData:
 	@staticmethod
 	def from_dict(d):
 		c = CharacterData()
+		c._chara_id = CharacterID[d.get("chara_id", "NONE")]
 		c._name = d.get("name", "")
 		c._level = d.get("level", 1)
 		c._exp = d.get("exp", 0)
@@ -128,6 +141,7 @@ class CharacterData:
 		c._mp = d.get("mp", 0)
 		return c
 
+# オプションデータ.
 class OptionData:
 	MIN_VOLUME = 0
 	MAX_VOLUME = 10
@@ -145,12 +159,24 @@ class OptionData:
 	@property
 	def volume_se(self):
 		return self._volume_se
+	@volume_se.setter
+	def volume_se(self, value):
+		self._volume_se = max(OptionData.MIN_VOLUME, min(OptionData.MAX_VOLUME, value))
+		pass
 	@property
 	def volume_voice(self):
 		return self._volume_voice
+	@volume_voice.setter
+	def volume_voice(self, value):
+		self._volume_voice = max(OptionData.MIN_VOLUME, min(OptionData.MAX_VOLUME, value))
+		pass
 	@property
 	def volume_bgm(self):
 		return self._volume_bgm
+	@volume_bgm.setter
+	def volume_bgm(self, value):
+		self._volume_bgm = max(OptionData.MIN_VOLUME, min(OptionData.MAX_VOLUME, value))
+		pass
 	@property
 	def language(self):
 		return self._language
@@ -188,10 +214,13 @@ class OptionData:
 			o._difficulty = Difficulty.DEFAULT
 		return o
 
+# ゲームデータ.
 class GameData:
 	def __init__(self):
 		# CHARA_BEGIN から CHARA_END までのキャラクターデータ.
-		self._characters = {char_id: CharacterData() for char_id in CharacterID if char_id in (CharacterID.CHARA_BEGIN, CharacterID.CHARA_END)}
+		# 範囲内の全キャラクターを初期化しておく.
+		#self._characters = {char_id: CharacterData() for char_id in CharacterID if char_id in (CharacterID.CHARA_BEGIN, CharacterID.CHARA_END)}
+		self._characters = {CharacterID(v): CharacterData(CharacterID(v)) for v in range(CharacterID.CHARA_BEGIN.value, CharacterID.CHARA_END.value + 1)}
 		pass
 	pass
 
@@ -220,6 +249,7 @@ class GameData:
 		return g
 
 
+# 敵キャラクターの記録データ.
 class RecordEnemyData:
 	def __init__(self):
 		self._kill_count = 0
@@ -244,6 +274,7 @@ class RecordEnemyData:
 		r._kill_count = d.get("kill_count", 0)
 		return r
 
+# 戦歴などの記録データ.
 class RecordData:
 	LOG_MAX = 100
 
@@ -251,7 +282,8 @@ class RecordData:
 		self._play_time = 0
 
 		# ENEMY_BEGIN から ENEMY_END までの討伐記録データ.
-		self._enemy_record = {char_id: RecordEnemyData() for char_id in CharacterID if char_id in (CharacterID.ENEMY_BEGIN, CharacterID.ENEMY_END)}
+		self._enemy_record = {CharacterID(v): RecordEnemyData() for v in range(CharacterID.ENEMY_BEGIN.value, CharacterID.ENEMY_END.value + 1)}
+		#self._enemy_record = {char_id: RecordEnemyData() for char_id in CharacterID if char_id in (CharacterID.ENEMY_BEGIN, CharacterID.ENEMY_END)}
 
 		# ログデータ.
 		# テキスト（文字列）の可変長配列（上限は100件）.
@@ -396,8 +428,8 @@ class App:
 		self._save_data_dir: str = None
 		self._save_data_path: str = None
 
-		self._vendor = "takezoh"
-		self._app_name = "pyxel_save_load_sample"
+		#self._vendor = "takezoh"
+		#self._app_name = "pyxel_save_load_sample"
 
 		# セーブデータディレクトリの取得.
 		if self._vendor is not None and self._app_name is not None:
@@ -419,6 +451,59 @@ class App:
 
 		pyxel.run(self.update, self.draw)
 
+	def save_pickle(self):
+		# フォルダが存在しない場合は作成する.
+		save_folder = os.path.dirname(self._save_data_pickle_path)
+		if not os.path.exists(save_folder):
+			os.makedirs(save_folder)
+
+		with open(self._save_data_pickle_path, 'wb') as file:
+			pickle.dump(self._save_data, file)
+		pass
+
+	def load_pickle(self):
+		if not os.path.exists(self._save_data_pickle_path):
+			print("No pickle save file to load")
+			return
+
+		with open(self._save_data_pickle_path, 'rb') as file:
+			loaded = pickle.load(file)
+			if loaded is not None:
+				self._save_data = loaded
+				print(f"Pickle loaded: {self._save_data_pickle_path}")
+				print(self._save_data)
+			else:
+				print("Failed to load pickle save data")
+		pass
+
+	def save_local_storage(self):
+		if window is not None:
+			try:
+				data_str = json.dumps(self._save_data.to_dict())
+				window.localStorage.setItem("pyxel_save_data", data_str)
+				print("Saved to localStorage")
+			except Exception as e:
+				print(f"localStorage save error: {e}")
+		else:
+			print("localStorage not available in this environment")
+		pass
+
+	def load_local_storage(self):
+		if window is not None:
+			try:
+				data_str = window.localStorage.getItem("pyxel_save_data")
+				if data_str is not None:
+					data = json.loads(data_str)
+					self._save_data = SaveData.from_dict(data)
+					print("Loaded from localStorage")
+				else:
+					print("No localStorage save data to load")
+			except Exception as e:
+				print(f"localStorage load error: {e}")
+		else:
+			print("localStorage not available in this environment")
+		pass
+
 	def update(self):
 		if pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
 			self._x += 1
@@ -431,11 +516,12 @@ class App:
 		
 		if pyxel.btnp(pyxel.KEY_Z):
 			# ダミーの値を設定してみる.
-			self._save_data.option_data._volume_bgm = 7
-			self._save_data.game_data._characters[CharacterID.CHARA_001]._name = "Hero"
-			self._save_data.game_data._characters[CharacterID.CHARA_001]._level = 5
-			self._save_data.record_data._play_time = 12345
-			self._save_data.record_data._enemy_record[CharacterID.ENEMY_001]._kill_count = 10
+			self._save_data.option_data.volume_bgm = 7
+			self._save_data.game_data._characters[CharacterID.CHARA_001].chara_id = CharacterID.CHARA_001
+			self._save_data.game_data._characters[CharacterID.CHARA_001].name = "Hero"
+			self._save_data.game_data._characters[CharacterID.CHARA_001].level = 5
+			self._save_data.record_data.play_time = 12345
+			self._save_data.record_data._enemy_record[CharacterID.ENEMY_001].kill_count = 10
 			self._save_data.record_data.add_log("This is a test log entry.")
 			# 
 			print(self._save_data)
@@ -469,6 +555,8 @@ class App:
 		
 		# pickleセーブ
 		if pyxel.btnp(pyxel.KEY_Q):
+			self.save_pickle()
+			"""
 			try:
 				# ensure directory exists
 				dirname = os.path.dirname(self._save_data_pickle_path)
@@ -479,9 +567,12 @@ class App:
 				print(f"Pickle saved: {self._save_data_pickle_path}")
 			except Exception as e:
 				print(f"Pickle save error: {e}")
+			"""
 		
 		# pickleロード
 		if pyxel.btnp(pyxel.KEY_W):
+			self.load_pickle()
+			"""
 			try:
 				with open(self._save_data_pickle_path, 'rb') as f:
 					loaded = pickle.load(f)
@@ -493,9 +584,12 @@ class App:
 					print("No pickle save file to load")
 			except Exception as e:
 				print(f"Pickle load error: {e}")
+			"""
 
 		# ローカルストレージセーブ（ブラウザ環境のみ）
 		if pyxel.btnp(pyxel.KEY_E):
+			self.save_local_storage()
+			"""
 			if window is not None:
 				try:
 					data_str = json.dumps(self._save_data.to_dict())
@@ -505,14 +599,18 @@ class App:
 					print(f"localStorage save error: {e}")
 			else:
 				print("localStorage not available in this environment")
+			"""
+		
 		# ローカルストレージロード（ブラウザ環境のみ）
 		if pyxel.btnp(pyxel.KEY_R):
+			self.load_local_storage()
+			"""
 			if window is not None:
 				try:
 					data_str = window.localStorage.getItem("pyxel_save_data")
 					if data_str is not None:
-						d = json.loads(data_str)
-						loaded = SaveData.from_dict(d)
+						data_str = json.loads(data_str)
+						loaded = SaveData.from_dict(data_str)
 						self._save_data = loaded
 						print("Loaded from localStorage")
 						print(self._save_data)
@@ -522,11 +620,21 @@ class App:
 					print(f"localStorage load error: {e}")
 			else:
 				print("localStorage not available in this environment")
+			"""
 		pass
 
 	def draw(self):
 		pyxel.cls(1)
 		pyxel.text(16, 8, f"frame:{pyxel.frame_count}", 9)
+
+		pyxel.text(16, 24, f"Z : setup dummy save data", 9)
+		pyxel.text(16, 32, f"X : dump save data", 9)
+		pyxel.text(16, 40, f"A : save to JSON", 9)
+		pyxel.text(16, 48, f"S : load from JSON", 9)
+		pyxel.text(16, 56, f"Q : save to pickle", 9)
+		pyxel.text(16, 64, f"W : load from pickle", 9)
+		pyxel.text(16, 72, f"E : save to localStorage(browser only)", 9)
+		pyxel.text(16, 80, f"R : load from localStorage(browser only)", 9)
 
 		pyxel.blt(self._x, self._y, 1, 0, 0, 16, 16, 13)
 		pass
