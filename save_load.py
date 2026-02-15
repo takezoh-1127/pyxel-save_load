@@ -556,71 +556,18 @@ class App:
 		# pickleセーブ
 		if pyxel.btnp(pyxel.KEY_Q):
 			self.save_pickle()
-			"""
-			try:
-				# ensure directory exists
-				dirname = os.path.dirname(self._save_data_pickle_path)
-				if dirname:
-					os.makedirs(dirname, exist_ok=True)
-				with open(self._save_data_pickle_path, 'wb') as f:
-					pickle.dump(self._save_data, f)
-				print(f"Pickle saved: {self._save_data_pickle_path}")
-			except Exception as e:
-				print(f"Pickle save error: {e}")
-			"""
 		
 		# pickleロード
 		if pyxel.btnp(pyxel.KEY_W):
 			self.load_pickle()
-			"""
-			try:
-				with open(self._save_data_pickle_path, 'rb') as f:
-					loaded = pickle.load(f)
-				if loaded is not None:
-					self._save_data = loaded
-					print(f"Pickle loaded: {self._save_data_pickle_path}")
-					print(self._save_data)
-				else:
-					print("No pickle save file to load")
-			except Exception as e:
-				print(f"Pickle load error: {e}")
-			"""
 
 		# ローカルストレージセーブ（ブラウザ環境のみ）
 		if pyxel.btnp(pyxel.KEY_E):
 			self.save_local_storage()
-			"""
-			if window is not None:
-				try:
-					data_str = json.dumps(self._save_data.to_dict())
-					window.localStorage.setItem("pyxel_save_data", data_str)
-					print("Saved to localStorage")
-				except Exception as e:
-					print(f"localStorage save error: {e}")
-			else:
-				print("localStorage not available in this environment")
-			"""
 		
 		# ローカルストレージロード（ブラウザ環境のみ）
 		if pyxel.btnp(pyxel.KEY_R):
 			self.load_local_storage()
-			"""
-			if window is not None:
-				try:
-					data_str = window.localStorage.getItem("pyxel_save_data")
-					if data_str is not None:
-						data_str = json.loads(data_str)
-						loaded = SaveData.from_dict(data_str)
-						self._save_data = loaded
-						print("Loaded from localStorage")
-						print(self._save_data)
-					else:
-						print("No localStorage save data found")
-				except Exception as e:
-					print(f"localStorage load error: {e}")
-			else:
-				print("localStorage not available in this environment")
-			"""
 		pass
 
 	def draw(self):
